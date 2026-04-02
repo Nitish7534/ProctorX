@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Registration</title>
+    <link rel="stylesheet" href="login_registration.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Student Registration</h1>
+        
+        <div class="form-container">
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="name">Full Name:</label>
+                    <input type="text" id="name" placeholder="John Doe" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" placeholder="john@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" placeholder="Minimum 6 characters" required minlength="6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password:</label>
+                    <input type="password" id="confirmPassword" placeholder="Re-enter password" required>
+                </div>
+                
+                <button type="submit" class="btn register-btn">Register</button>
+            </form>
+            
+            <div class="links">
+                <a href="student_login.html">🔐 Already have an account? Login Here</a>
+                <a href="index.html">🏠 Back to Home</a>
+            </div>
+            
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const messageDiv = document.getElementById('message');
+            
+            // Validate
+            if (password !== confirmPassword) {
+                messageDiv.innerHTML = '<p style="color: red;">❌ Passwords do not match!</p>';
+                return;
+            }
+            
+            if (password.length < 6) {
+                messageDiv.innerHTML = '<p style="color: red;">❌ Password must be at least 6 characters!</p>';
+                return;
+            }
+            
+            messageDiv.innerHTML = '<p>Registering user...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        password: password,
+                        role: 'student'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 201) {
+                    messageDiv.innerHTML = `<p style="color: green;">✅ Registration Successful!</p>`;
+                    messageDiv.innerHTML += `<p>User ID: ${data.user_id}</p>`;
+                    messageDiv.innerHTML += `<p>Email: ${data.email}</p>`;
+                    messageDiv.innerHTML += '<p>Redirecting to login...</p>';
+                    
+                    // Redirect after 3 seconds
+                    setTimeout(() => {
+                        window.location.href = 'student_login.html';
+                    }, 3000);
+                    
+                } else {
+                    messageDiv.innerHTML = `<p style="color: red;">❌ ${data.error || 'Registration failed'}</p>`;
+                }
+                
+            } catch (error) {
+                messageDiv.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

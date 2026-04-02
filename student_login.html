@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Login - Exam Proctoring</title>
+    <link rel="stylesheet" href="login_registration.css">
+</head>
+<body>
+    <div class="container">
+        <h1>👨‍🎓 Student Login</h1>
+        
+        <div class="form-container">
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" placeholder="student@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" placeholder="Enter password" required>
+                </div>
+                
+                <button type="submit" class="btn login-btn">Login</button>
+            </form>
+            
+            <div class="links">
+                <a href="student_register.html">📝 New Student? Register Here</a>
+                <a href="index.html">🏠 Back to Home</a>
+            </div>
+            
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('message');
+            
+            // Test with demo credentials first
+            if (email === 'student@example.com' && password === 'student123') {
+                messageDiv.innerHTML = '<p style="color: green;">✅ Demo login successful! (Using hardcoded credentials)</p>';
+                messageDiv.innerHTML += '<p>Testing API login...</p>';
+            }
+            
+            try {
+                // Call the actual API
+                const response = await fetch('http://localhost:5000/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = `<p style="color: green;">✅ Login Successful!</p>`;
+                    messageDiv.innerHTML += `<p>Welcome ${data.user.name}!</p>`;
+                    messageDiv.innerHTML += `<p>Role: ${data.user.role}</p>`;
+                    
+                    // Store user data in localStorage
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Redirect after 2 seconds
+                    setTimeout(() => {
+                        if (data.user.role === 'student') {
+                            window.location.href = 'student_dashboard.html';
+                        } else {
+                            window.location.href = 'admin_dashboard.html';
+                        }
+                    }, 2000);
+                    
+                } else {
+                    messageDiv.innerHTML = `<p style="color: red;">❌ ${data.error || 'Login failed'}</p>`;
+                }
+                
+            } catch (error) {
+                messageDiv.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

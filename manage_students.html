@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Students - Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .students-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #2196F3;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .search-box input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .filter-btn.active {
+            background: #2196F3;
+            color: white;
+            border-color: #2196F3;
+        }
+        
+        .students-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .students-table th {
+            background: #2196F3;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .students-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .students-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-verified {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .status-pending {
+            background: #FF9800;
+            color: white;
+        }
+        
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 0 2px;
+        }
+        
+        .btn-verify { background: #4CAF50; color: white; }
+        .btn-view { background: #2196F3; color: white; }
+        .btn-delete { background: #f44336; color: white; }
+        .btn-email { background: #9C27B0; color: white; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+        
+        .no-students {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #666;
+        }
+        
+        .student-avatar {
+            width: 40px;
+            height: 40px;
+            background: #2196F3;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .export-options {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .bulk-actions {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            align-items: center;
+        }
+        
+        .select-all {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="students-container">
+        <h1><i class="fas fa-user-graduate"></i> Manage Students</h1>
+        <p>View, verify, and manage student accounts</p>
+        
+        <div class="links" style="margin-bottom: 20px;">
+            <a href="admin_dashboard.html"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        </div>
+        
+        <!-- Statistics Cards -->
+        <div class="stats-cards">
+            <div class="stat-card" onclick="filterStudents('all')">
+                <div class="stat-number" id="totalStudents">0</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+            <div class="stat-card" onclick="filterStudents('verified')">
+                <div class="stat-number" id="verifiedStudents">0</div>
+                <div class="stat-label">Verified</div>
+            </div>
+            <div class="stat-card" onclick="filterStudents('pending')">
+                <div class="stat-number" id="pendingStudents">0</div>
+                <div class="stat-label">Pending Verification</div>
+            </div>
+            <div class="stat-card" onclick="filterStudents('recent')">
+                <div class="stat-number" id="recentStudents">0</div>
+                <div class="stat-label">New (Last 7 days)</div>
+            </div>
+        </div>
+        
+        <!-- Controls -->
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search students by name or email...">
+                <button onclick="searchStudents()" class="btn" style="background: #2196F3;">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                <button onclick="clearSearch()" class="btn" style="background: #666;">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+            </div>
+            
+            <div class="export-options">
+                <button onclick="exportToCSV()" class="btn" style="background: #4CAF50;">
+                    <i class="fas fa-file-csv"></i> Export CSV
+                </button>
+                <button onclick="sendBulkEmail()" class="btn" style="background: #9C27B0;">
+                    <i class="fas fa-envelope"></i> Send Email
+                </button>
+            </div>
+        </div>
+        
+        <!-- Bulk Actions -->
+        <div class="bulk-actions">
+            <div class="select-all">
+                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                <label for="selectAll">Select All</label>
+            </div>
+            <button onclick="verifySelected()" class="btn btn-small" style="background: #4CAF50;">
+                <i class="fas fa-check"></i> Verify Selected
+            </button>
+            <button onclick="deleteSelected()" class="btn btn-small" style="background: #f44336;">
+                <i class="fas fa-trash"></i> Delete Selected
+            </button>
+        </div>
+        
+        <!-- Filter Buttons -->
+        <div class="filter-buttons">
+            <button class="filter-btn active" onclick="filterStudents('all')">All Students</button>
+            <button class="filter-btn" onclick="filterStudents('verified')">Verified</button>
+            <button class="filter-btn" onclick="filterStudents('pending')">Pending</button>
+            <button class="filter-btn" onclick="filterStudents('recent')">Recent</button>
+            <button class="filter-btn" onclick="filterStudents('active')">Active</button>
+        </div>
+        
+        <!-- Students Table -->
+        <div id="studentsTableContainer" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Loading students...
+        </div>
+        
+        <!-- Student Details Modal -->
+        <div id="detailsModal" class="modal">
+            <div class="modal-content">
+                <h2 id="studentName"></h2>
+                <div id="studentDetails"></div>
+                <div class="modal-actions">
+                    <button onclick="closeModal()" class="action-btn" style="background: #666;">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Send Email Modal -->
+        <div id="emailModal" class="modal">
+            <div class="modal-content">
+                <h2><i class="fas fa-envelope"></i> Send Email to Students</h2>
+                <div class="form-group">
+                    <label for="emailSubject">Subject:</label>
+                    <input type="text" id="emailSubject" placeholder="Email subject" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="emailMessage">Message:</label>
+                    <textarea id="emailMessage" rows="6" placeholder="Enter your message here..." class="form-control"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button onclick="sendEmail()" class="action-btn" style="background: #9C27B0;">
+                        <i class="fas fa-paper-plane"></i> Send Email
+                    </button>
+                    <button onclick="closeModal()" class="action-btn" style="background: #666;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check admin login
+        const admin = JSON.parse(localStorage.getItem('admin'));
+        if (!admin || admin.role !== 'admin') {
+            alert('Access denied. Please login as admin.');
+            window.location.href = 'admin_login.html';
+        }
+        
+        let allStudents = [];
+        let filteredStudents = [];
+        let selectedStudents = new Set();
+        
+        async function loadStudents() {
+            const container = document.getElementById('studentsTableContainer');
+            container.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading students...';
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/admin/students');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    allStudents = data;
+                    filteredStudents = [...allStudents];
+                    updateStatistics();
+                    displayStudents(filteredStudents);
+                } else {
+                    container.innerHTML = `<p style="color: red;">Error loading students: ${data.error}</p>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        function updateStatistics() {
+            const total = allStudents.length;
+            const verified = allStudents.filter(s => s.is_verified).length;
+            const pending = allStudents.filter(s => !s.is_verified).length;
+            
+            // Recent students (last 7 days)
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            const recent = allStudents.filter(s => new Date(s.created_at) > weekAgo).length;
+            
+            document.getElementById('totalStudents').textContent = total;
+            document.getElementById('verifiedStudents').textContent = verified;
+            document.getElementById('pendingStudents').textContent = pending;
+            document.getElementById('recentStudents').textContent = recent;
+        }
+        
+        function displayStudents(students) {
+            const container = document.getElementById('studentsTableContainer');
+            
+            if (students.length === 0) {
+                container.innerHTML = `
+                    <div class="no-students">
+                        <i class="fas fa-user-graduate" style="font-size: 48px; color: #ccc; margin-bottom: 20px;"></i>
+                        <h3>No Students Found</h3>
+                        <p>No students have registered yet.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            const table = document.createElement('table');
+            table.className = 'students-table';
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">
+                            <input type="checkbox" id="tableSelectAll" onchange="toggleTableSelectAll()">
+                        </th>
+                        <th>Student</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Registered</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsBody">
+                </tbody>
+            `;
+            
+            container.appendChild(table);
+            
+            const tbody = document.getElementById('studentsBody');
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                
+                // Get first letter for avatar
+                const firstLetter = student.name.charAt(0).toUpperCase();
+                
+                // Format date
+                const registeredDate = new Date(student.created_at).toLocaleDateString();
+                
+                row.innerHTML = `
+                    <td>
+                        <input type="checkbox" class="student-checkbox" value="${student.id}" 
+                               onchange="toggleStudentSelection(${student.id})">
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="student-avatar">${firstLetter}</div>
+                            <div>
+                                <strong>${student.name}</strong><br>
+                                <small>ID: ${student.id}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${student.email}</td>
+                    <td>
+                        <span class="status-badge ${student.is_verified ? 'status-verified' : 'status-pending'}">
+                            ${student.is_verified ? 'Verified' : 'Pending'}
+                        </span>
+                    </td>
+                    <td>${registeredDate}</td>
+                    <td>
+                        <button onclick="viewStudentDetails(${student.id})" class="action-btn btn-view" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        ${!student.is_verified ? `
+                            <button onclick="verifyStudent(${student.id})" class="action-btn btn-verify" title="Verify Student">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        ` : ''}
+                        <button onclick="sendEmailToStudent('${student.email}', '${student.name}')" class="action-btn btn-email" title="Send Email">
+                            <i class="fas fa-envelope"></i>
+                        </button>
+                        <button onclick="deleteStudentPrompt(${student.id}, '${student.name}')" class="action-btn btn-delete" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        function searchStudents() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            if (!searchTerm) {
+                filteredStudents = [...allStudents];
+                displayStudents(filteredStudents);
+                return;
+            }
+            
+            filteredStudents = allStudents.filter(student => 
+                student.name.toLowerCase().includes(searchTerm) ||
+                student.email.toLowerCase().includes(searchTerm) ||
+                student.id.toString().includes(searchTerm)
+            );
+            
+            displayStudents(filteredStudents);
+        }
+        
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            filteredStudents = [...allStudents];
+            displayStudents(filteredStudents);
+            // Reset filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.filter-btn').classList.add('active');
+        }
+        
+        function filterStudents(filter) {
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            let filtered = allStudents;
+            
+            switch(filter) {
+                case 'verified':
+                    filtered = allStudents.filter(s => s.is_verified);
+                    break;
+                    
+                case 'pending':
+                    filtered = allStudents.filter(s => !s.is_verified);
+                    break;
+                    
+                case 'recent':
+                    const weekAgo = new Date();
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    filtered = allStudents.filter(s => new Date(s.created_at) > weekAgo);
+                    break;
+                    
+                case 'active':
+                    // You would need exam attempt data for this
+                    filtered = allStudents; // Placeholder
+                    break;
+                    
+                default:
+                    // Show all
+            }
+            
+            filteredStudents = filtered;
+            displayStudents(filtered);
+        }
+        
+        async function viewStudentDetails(studentId) {
+            try {
+                const student = allStudents.find(s => s.id == studentId);
+                if (!student) {
+                    alert('Student not found');
+                    return;
+                }
+                
+                document.getElementById('studentName').textContent = student.name;
+                
+                // Get additional student data (exam attempts)
+                let detailsHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div>
+                            <p><strong>Student ID:</strong> ${student.id}</p>
+                            <p><strong>Name:</strong> ${student.name}</p>
+                            <p><strong>Email:</strong> ${student.email}</p>
+                            <p><strong>Status:</strong> ${student.is_verified ? 'Verified' : 'Pending Verification'}</p>
+                        </div>
+                        <div>
+                            <p><strong>Registered:</strong> ${new Date(student.created_at).toLocaleString()}</p>
+                            <p><strong>Account Age:</strong> ${getAccountAge(student.created_at)}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 5px;">
+                        <h4>Student Information</h4>
+                        <p>Additional student details would be displayed here.</p>
+                    </div>
+                `;
+                
+                document.getElementById('studentDetails').innerHTML = detailsHTML;
+                document.getElementById('detailsModal').style.display = 'flex';
+                
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+        
+        function getAccountAge(createdAt) {
+            const created = new Date(createdAt);
+            const now = new Date();
+            const diffTime = Math.abs(now - created);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return `${diffDays} days`;
+        }
+        
+        async function verifyStudent(studentId) {
+            if (!confirm('Are you sure you want to verify this student?')) return;
+            
+            try {
+                const response = await fetch(`http://localhost:5000/api/admin/student/${studentId}/verify`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Student verified successfully!');
+                    loadStudents(); // Reload the list
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+        
+        async function deleteStudent(studentId) {
+            try {
+                const response = await fetch(`http://localhost:5000/api/admin/student/${studentId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Student deleted successfully!');
+                    loadStudents();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+        
+        // Selection functions
+        function toggleStudentSelection(studentId) {
+            if (selectedStudents.has(studentId)) {
+                selectedStudents.delete(studentId);
+            } else {
+                selectedStudents.add(studentId);
+            }
+            updateSelectAllCheckbox();
+        }
+        
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            const checkboxes = document.querySelectorAll('.student-checkbox');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll;
+                const studentId = parseInt(checkbox.value);
+                if (selectAll) {
+                    selectedStudents.add(studentId);
+                } else {
+                    selectedStudents.delete(studentId);
+                }
+            });
+        }
+        
+        function toggleTableSelectAll() {
+            const selectAll = document.getElementById('tableSelectAll').checked;
+            const checkboxes = document.querySelectorAll('.student-checkbox');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll;
+                const studentId = parseInt(checkbox.value);
+                if (selectAll) {
+                    selectedStudents.add(studentId);
+                } else {
+                    selectedStudents.delete(studentId);
+                }
+            });
+            
+            document.getElementById('selectAll').checked = selectAll;
+        }
+        
+        function updateSelectAllCheckbox() {
+            const totalStudents = filteredStudents.length;
+            const selectedCount = selectedStudents.size;
+            
+            document.getElementById('selectAll').checked = selectedCount === totalStudents && totalStudents > 0;
+            document.getElementById('tableSelectAll').checked = selectedCount === totalStudents && totalStudents > 0;
+        }
+        
+        async function verifySelected() {
+            if (selectedStudents.size === 0) {
+                alert('Please select at least one student.');
+                return;
+            }
+            
+            if (!confirm(`Verify ${selectedStudents.size} selected student(s)?`)) return;
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/admin/students/bulk-verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        student_ids: Array.from(selectedStudents)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`Successfully verified ${data.verified_count} student(s)`);
+                    loadStudents();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+        
+        function deleteSelected() {
+            if (selectedStudents.size === 0) {
+                alert('Please select at least one student.');
+                return;
+            }
+            
+            if (!confirm(`Delete ${selectedStudents.size} selected student(s)? This cannot be undone.`)) return;
+            
+            // Implement bulk deletion
+            alert('Bulk deletion feature requires backend implementation.');
+        }
+        
+        function sendBulkEmail() {
+            if (selectedStudents.size === 0) {
+                alert('Please select at least one student to send email.');
+                return;
+            }
+            
+            document.getElementById('emailModal').style.display = 'flex';
+        }
+        
+        function sendEmailToStudent(email, name) {
+            selectedStudents.clear();
+            document.getElementById('emailSubject').value = `Message from Exam Proctoring System`;
+            document.getElementById('emailMessage').value = `Dear ${name},\n\n`;
+            document.getElementById('emailModal').style.display = 'flex';
+        }
+        
+        async function sendEmail() {
+            const subject = document.getElementById('emailSubject').value;
+            const message = document.getElementById('emailMessage').value;
+            
+            if (!subject || !message) {
+                alert('Please fill in both subject and message.');
+                return;
+            }
+            
+            try {
+                const studentIds = selectedStudents.size > 0 ? 
+                    Array.from(selectedStudents) : ['all'];
+                
+                const response = await fetch('http://localhost:5000/api/admin/students/send-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        subject: subject,
+                        message: message,
+                        student_ids: studentIds
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`Email prepared for ${data.recipient_count} student(s)`);
+                    closeModal();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+        
+        function exportToCSV() {
+            // Convert students data to CSV
+            const headers = ['ID', 'Name', 'Email', 'Status', 'Registered Date'];
+            const csvData = [
+                headers.join(','),
+                ...filteredStudents.map(s => [
+                    s.id,
+                    `"${s.name}"`,
+                    s.email,
+                    s.is_verified ? 'Verified' : 'Pending',
+                    new Date(s.created_at).toLocaleDateString()
+                ].join(','))
+            ].join('\n');
+            
+            // Create download link
+            const blob = new Blob([csvData], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `students_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            alert('CSV file downloaded successfully!');
+        }
+        
+        function closeModal() {
+            document.getElementById('detailsModal').style.display = 'none';
+            document.getElementById('emailModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                closeModal();
+            }
+        };
+        
+        // Load students on page load
+        window.onload = loadStudents;
+    </script>
+</body>
+</html>
