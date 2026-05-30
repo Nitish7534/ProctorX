@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Result</title>
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        .result-container{
+            max-width:800px;
+            margin:50px auto;
+            background:white;
+            padding:30px;
+            border-radius:10px;
+            box-shadow:0 5px 15px rgba(0,0,0,0.1);
+            text-align:center;
+        }
+
+        .score-circle{
+            width:180px;
+            height:180px;
+            border-radius:50%;
+            background:#4CAF50;
+            color:white;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            margin:20px auto;
+            font-size:40px;
+            font-weight:bold;
+        }
+
+        .result-details{
+            margin-top:30px;
+            text-align:left;
+        }
+
+        .detail-row{
+            display:flex;
+            justify-content:space-between;
+            padding:12px;
+            border-bottom:1px solid #eee;
+        }
+
+        .actions{
+            margin-top:30px;
+        }
+
+        .btn{
+            padding:12px 20px;
+            border:none;
+            border-radius:5px;
+            color:white;
+            cursor:pointer;
+            margin:5px;
+        }
+
+        .dashboard-btn{
+            background:#2196F3;
+        }
+
+        .history-btn{
+            background:#4CAF50;
+        }
+    </style>
+</head>
+<body>
+
+<div class="result-container">
+
+    <h1>🎉 Exam Submitted Successfully</h1>
+
+    <div class="score-circle" id="scoreDisplay">
+        0
+    </div>
+
+    <h2 id="examTitle">Exam Result</h2>
+
+    <div class="result-details">
+
+        <div class="detail-row">
+            <span>Student Name</span>
+            <span id="studentName"></span>
+        </div>
+
+        <div class="detail-row">
+            <span>Exam ID</span>
+            <span id="examId"></span>
+        </div>
+
+        <div class="detail-row">
+            <span>Score</span>
+            <span id="score"></span>
+        </div>
+
+        <div class="detail-row">
+            <span>Total Marks</span>
+            <span id="totalMarks"></span>
+        </div>
+
+        <div class="detail-row">
+            <span>Percentage</span>
+            <span id="percentage"></span>
+        </div>
+
+        <div class="detail-row">
+            <span>Status</span>
+            <span id="status"></span>
+        </div>
+
+    </div>
+
+    <div class="actions">
+
+        <button
+            class="btn dashboard-btn"
+            onclick="window.location.href='student_dashboard.html'">
+            Back to Dashboard
+        </button>
+
+        <button
+            class="btn history-btn"
+            onclick="window.location.href='exam_history.html'">
+            View History
+        </button>
+
+        <button
+    class="btn"
+    style="background:#FF9800"
+    onclick="printResult()">
+    🖨️ Print Result
+</button>
+
+    </div>
+
+</div>
+
+<script>
+
+const student = JSON.parse(localStorage.getItem('user'));
+
+if(!student){
+    window.location.href = 'student_login.html';
+}
+
+const params = new URLSearchParams(window.location.search);
+
+const examId = params.get('exam_id');
+const score = parseInt(params.get('score')) || 0;
+const totalMarks = parseInt(params.get('total_marks')) || 100;
+
+const percentage = ((score / totalMarks) * 100).toFixed(1);
+
+document.getElementById('studentName').textContent = student.name;
+document.getElementById('examId').textContent = examId;
+document.getElementById('score').textContent = score;
+document.getElementById('totalMarks').textContent = totalMarks;
+document.getElementById('percentage').textContent = percentage + '%';
+document.getElementById('scoreDisplay').textContent = score;
+
+document.getElementById('status').textContent =
+    percentage >= 40 ? 'PASS ✅' : 'FAIL ❌';
+
+function printResult() {
+    window.print(); 
+}
+
+
+</script>
+
+</body>
+</html>

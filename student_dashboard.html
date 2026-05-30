@@ -608,20 +608,23 @@
             try {
                 // Check if student has an ongoing exam
                 const response = await fetch(`http://localhost:5000/api/student/${student.id}/ongoing-exam`);
-                if (response.ok) {
-                    ongoingExam = await response.json();
-                    
-                    if (ongoingExam) {
-                        document.getElementById('timerWarning').style.display = 'block';
-                        updateRemainingTime();
-                        
-                        // Set continue exam link
-                        document.getElementById('continueExamLink').onclick = function(e) {
-                            e.preventDefault();
-                            continueOngoingExam();
-                        };
-                    }
+                if (!response.ok) {
+                    return;
                 }
+
+                ongoingExam = await response.json();
+
+                if (ongoingExam && ongoingExam.end_time) {
+                    document.getElementById('timerWarning').style.display = 'block';
+                    updateRemainingTime();
+                } else {
+                    document.getElementById('timerWarning').style.display = 'none';
+                }
+
+                document.getElementById('continueExamLink').onclick = function(e) {
+                    e.preventDefault();
+                    continueOngoingExam();
+                };
             } catch (error) {
                 console.error('Error checking ongoing exam:', error);
             }
@@ -800,12 +803,16 @@
                     const activityDiv = document.createElement('div');
                     activityDiv.className = 'activity-item';
                     
-                    const time = new Date(item.timestamp).toLocaleString();
-                    
-                    activityDiv.innerHTML = `
-                        <p class="activity-text">${item.description}</p>
-                        <div class="activity-time">${time}</div>
-                    `;
+                    const time = item.end_time
+    ? new Date(item.end_time).toLocaleString()
+    : 'No Date';
+
+activityDiv.innerHTML = `
+    <p class="activity-text">
+        Exam ${item.exam_id} completed - Score: ${item.score}/${item.total_marks}
+    </p>
+    <div class="activity-time">${time}</div>
+`;
                     
                     activityList.appendChild(activityDiv);
                 });
@@ -833,10 +840,16 @@
             alert('Certificate download feature will be implemented soon.');
         }
         
-        function logout() {
-            localStorage.removeItem('user');
-            window.location.href = 'student_login.html';
-        }
+        async function logout() {
+
+    await fetch('http://localhost:5000/api/logout', {
+        method: 'POST',
+        credentials: 'include'
+    });
+
+    localStorage.removeItem('user');
+    window.location.href = 'student_login.html';
+}
         
         function closeModal() {
             document.getElementById('instructionsModal').style.display = 'none';

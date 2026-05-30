@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Exam History</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .container {
+            width: 90%;
+            margin: 30px auto;
+        }
+
+        .history-card {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .score {
+            font-weight: bold;
+            color: green;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .back-btn {
+            padding: 10px 15px;
+            background: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>📚 Exam History</h1>
+
+    <a href="student_dashboard.html" class="back-btn">
+        ← Back to Dashboard
+    </a>
+
+    <br><br>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Exam</th>
+                <th>Score</th>
+                <th>Total Marks</th>
+                <th>Percentage</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+
+        <tbody id="historyTable">
+            <tr>
+                <td colspan="6">Loading...</td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+
+<script>
+
+const student = JSON.parse(localStorage.getItem('user'));
+
+if (!student) {
+    window.location.href = 'student_login.html';
+}
+
+async function loadHistory() {
+
+    try {
+
+        const response = await fetch(
+            `http://localhost:5000/api/student/${student.id}/results`
+        );
+
+        const results = await response.json();
+
+        const table = document.getElementById('historyTable');
+
+        if(results.length === 0){
+            table.innerHTML = `
+                <tr>
+                    <td colspan="6">No exams attempted yet.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        table.innerHTML = '';
+
+        results.forEach(result => {
+
+            const percentage =
+                ((result.score / result.total_marks) * 100).toFixed(1);
+
+            table.innerHTML += `
+                <tr>
+                    <td>${result.exam_title || result.exam_id}</td>
+                    <td>${result.score}</td>
+                    <td>${result.total_marks}</td>
+                    <td>${percentage}%</td>
+                    <td>${result.status}</td>
+                    <td>${result.end_time || '-'}</td>
+                </tr>
+            `;
+        });
+
+    } catch(error) {
+
+        document.getElementById('historyTable').innerHTML = `
+            <tr>
+                <td colspan="6">
+                    Error loading history
+                </td>
+            </tr>
+        `;
+    }
+}
+
+loadHistory();
+
+</script>
+
+</body>
+</html>

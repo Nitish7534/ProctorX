@@ -358,10 +358,16 @@
             // window.location.href = 'settings.html';
         }
         
-        function logout() {
-            localStorage.removeItem('admin');
-            window.location.href = 'admin_login.html';
-        }
+        async function logout() {
+
+    await fetch('http://localhost:5000/api/logout', {
+        method: 'POST',
+        credentials: 'include'
+    });
+
+    localStorage.removeItem('admin');
+    window.location.href = 'admin_login.html';
+}
         
         // Load data on page load
         window.onload = loadStatistics;

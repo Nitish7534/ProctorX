@@ -7,9 +7,17 @@ import hashlib
 import json
 import os
 from datetime import datetime
+from flask import Flask, request, jsonify, session
+from datetime import timedelta
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
+
+
+app.secret_key = "proctorx_secret_key_change_this"
+
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
 
 # Database Configuration
 db_config = {
@@ -238,8 +246,12 @@ def login():
         conn.close()
         
         if user:
+            session['user_id'] = user['id']
+            session['role'] = user['role']
+            session['name'] = user['name']
+            print("SESSION CREATED:", dict(session))
             return jsonify({
-                "message": "Login successful", 
+                "message": "Login successful",
                 "user": user
             })
         else:
@@ -364,8 +376,12 @@ def admin_login():
         conn.close()
         
         if user:
+            session['user_id'] = user['id']
+            session['role'] = user['role']
+            session['name'] = user['name']
+
             return jsonify({
-                "message": "Admin login successful", 
+                "message": "Admin login successful",
                 "user": user
             })
         else:
@@ -1773,6 +1789,142 @@ def submit_exam():
             "error": str(e)
         }), 500
 
+@app.route('/api/student/<int:student_id>/results', methods=['GET'])
+def get_student_results(student_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT *
+            FROM exam_results
+            WHERE student_id = %s
+            ORDER BY id DESC
+        """, (student_id,))
+
+        results = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(results)
+
+    except Exception as e:
+        print("Student Results Error:", str(e))
+        return jsonify([]), 500
+    
+@app.route('/api/check-session', methods=['GET'])
+def check_session():
+    if 'user_id' not in session:
+        return jsonify({
+            "logged_in": False
+        }), 401
+
+    return jsonify({
+        "logged_in": True,
+        "user_id": session['user_id'],
+        "role": session['role'],
+        "name": session['name']
+    })
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    session.clear()
+
+    return jsonify({
+        "success": True,
+        "message": "Logged out successfully"
+    })
+
+
+@app.route('/api/student/<int:student_id>/activity', methods=['GET'])
+def get_student_activity(student_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT
+                exam_id,
+                score,
+                total_marks,
+                end_time,
+                status
+            FROM exam_results
+            WHERE student_id = %s
+            ORDER BY end_time DESC
+            LIMIT 10
+        """, (student_id,))
+
+        activity = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(activity)
+
+    except Exception as e:
+        print("Activity Error:", str(e))
+        return jsonify([]), 500
+
+
+@app.route('/api/student/<int:student_id>/ongoing-exam', methods=['GET'])
+def get_ongoing_exam(student_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT *
+            FROM exam_results
+            WHERE student_id = %s
+            AND status = 'in_progress'
+            LIMIT 1
+        """, (student_id,))
+
+        exam = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if exam:
+            return jsonify(exam)
+
+        return jsonify({})
+
+    except Exception as e:
+        print("Ongoing Exam Error:", str(e))
+        return jsonify({}), 500
+    
+    
+
+@app.route('/api/student/<int:student_id>/upcoming-exams', methods=['GET'])
+def get_upcoming_exams(student_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT *
+            FROM exams
+            WHERE id NOT IN (
+                SELECT exam_id
+                FROM exam_results
+                WHERE student_id = %s
+                AND status = 'completed'
+            )
+        """, (student_id,))
+
+        exams = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(exams)
+
+    except Exception as e:
+        print("Upcoming Exams Error:", str(e))
+        return jsonify([]), 500
 
 if __name__ == '__main__':
     print("🚀 Starting Exam Proctoring System...")

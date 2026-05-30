@@ -1057,7 +1057,8 @@
                     }
                     
                     // Redirect to results page
-                    window.location.href = `view_results.html?exam_id=${examId}&score=${score}`;
+                    window.location.href =
+    `student_result.html?exam_id=${examId}&score=${score}&total_marks=${examData.total_marks}`;
                 } else {
                     throw new Error('Failed to submit exam');
                 }
