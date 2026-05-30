@@ -1606,6 +1606,71 @@ def clear_all_data():
     except Error as e:
         print(f"Clear data error: {e}")
         return jsonify({"error": "Error clearing data"}), 500
+    
+
+@app.route('/api/exam/start', methods=['POST'])
+def start_exam():
+    try:
+        data = request.json
+
+        student_id = data.get('student_id')
+        exam_id = data.get('exam_id')
+        start_time = data.get('start_time')
+
+        # Convert ISO datetime to MySQL format
+        if start_time:
+            start_time = datetime.fromisoformat(
+                start_time.replace("Z", "+00:00")
+            ).strftime("%Y-%m-%d %H:%M:%S")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if already started
+        cursor.execute("""
+            SELECT id FROM exam_results
+            WHERE student_id=%s AND exam_id=%s
+        """, (student_id, exam_id))
+
+        existing = cursor.fetchone()
+
+        if not existing:
+            cursor.execute("""
+                INSERT INTO exam_results
+                (
+                    student_id,
+                    exam_id,
+                    score,
+                    total_marks,
+                    start_time,
+                    status,
+                    violations
+                )
+                VALUES (%s,%s,0,0,%s,'in_progress',0)
+            """, (
+                student_id,
+                exam_id,
+                start_time
+            ))
+
+            conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "message": "Exam session started"
+        })
+
+    except Exception as e:
+        print("Start Exam Error:", str(e))
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 
 # Add more routes as needed...
 
@@ -1616,54 +1681,97 @@ def submit_exam():
 
         student_id = data.get("student_id")
         exam_id = data.get("exam_id")
-        answers = data.get("answers")   # comes from frontend JS
+        score = data.get("score")
+        total_marks = data.get("total_marks")
+        start_time = data.get("start_time")
+        end_time = data.get("end_time")
+        status = data.get("status", "completed")
+        violations = data.get("violations", 0)
+
+        # FIX DATETIME FORMAT FOR MYSQL
+        if start_time:
+            start_time = datetime.fromisoformat(
+                start_time.replace("Z", "+00:00")
+            ).strftime("%Y-%m-%d %H:%M:%S")
+
+        if end_time:
+            end_time = datetime.fromisoformat(
+                end_time.replace("Z", "+00:00")
+            ).strftime("%Y-%m-%d %H:%M:%S")
 
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
 
-        # Fetch correct answers
-        cursor.execute(
-            "SELECT correct_answer, marks FROM questions WHERE exam_id = %s",
-            (exam_id,)
-        )
-        questions = cursor.fetchall()
+        # Check if result already exists
+        cursor.execute("""
+            SELECT id FROM exam_results
+            WHERE student_id=%s AND exam_id=%s
+        """, (student_id, exam_id))
 
-        score = 0
-        total_marks = 0
+        existing = cursor.fetchone()
 
-        # Answer evaluation (index-based, same as frontend)
-        for index, q in enumerate(questions):
-            total_marks += q["marks"]
-            if str(index) in answers and answers[str(index)] == q["correct_answer"]:
-                score += q["marks"]
-
-        # Update exam_results
-        cursor.execute(
-            """
-            UPDATE exam_results
-            SET score = %s,
-                total_marks = %s,
-                end_time = %s,
-                status = 'completed'
-            WHERE student_id = %s AND exam_id = %s
-            """,
-            (score, total_marks, datetime.now(), student_id, exam_id)
-        )
+        if existing:
+            cursor.execute("""
+                UPDATE exam_results
+                SET score=%s,
+                    total_marks=%s,
+                    start_time=%s,
+                    end_time=%s,
+                    status=%s,
+                    violations=%s
+                WHERE student_id=%s AND exam_id=%s
+            """, (
+                score,
+                total_marks,
+                start_time,
+                end_time,
+                status,
+                violations,
+                student_id,
+                exam_id
+            ))
+        else:
+            cursor.execute("""
+                INSERT INTO exam_results
+                (
+                    student_id,
+                    exam_id,
+                    score,
+                    total_marks,
+                    start_time,
+                    end_time,
+                    status,
+                    violations
+                )
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (
+                student_id,
+                exam_id,
+                score,
+                total_marks,
+                start_time,
+                end_time,
+                status,
+                violations
+            ))
 
         conn.commit()
+
         cursor.close()
         conn.close()
 
         return jsonify({
             "success": True,
             "message": "Exam submitted successfully",
-            "score": score,
-            "total_marks": total_marks
+            "score": score
         })
 
     except Exception as e:
-        print("Submit Exam Error:", e)
-        return jsonify({"success": False, "error": "Exam submission failed"}), 500
+        print("Submit Exam Error:", str(e))
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 
 if __name__ == '__main__':
