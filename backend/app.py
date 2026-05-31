@@ -1926,6 +1926,73 @@ def get_upcoming_exams(student_id):
         print("Upcoming Exams Error:", str(e))
         return jsonify([]), 500
 
+
+@app.route('/api/exam/violation', methods=['POST'])
+def save_exam_violation():
+
+    try:
+        data = request.json
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO exam_violations
+            (student_id, exam_id, violation_type)
+            VALUES (%s,%s,%s)
+        """, (
+            data['student_id'],
+            data['exam_id'],
+            data['violation_type']
+        ))
+
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True
+        })
+
+    except Exception as e:
+        print("Violation Error:", e)
+
+        return jsonify({
+            "success": False
+        }), 500
+    
+@app.route('/api/admin/violations', methods=['GET'])
+def get_all_violations():
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT
+            ev.*,
+            u.name as student_name,
+            e.title as exam_title
+        FROM exam_violations ev
+        JOIN users u
+            ON ev.student_id = u.id
+        JOIN exams e
+            ON ev.exam_id = e.id
+        ORDER BY ev.timestamp DESC
+    """)
+
+    violations = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(violations)
+
+
+@app.route('/hello')
+def hello():
+    return "HELLO PROCTORX"
+
 if __name__ == '__main__':
     print("🚀 Starting Exam Proctoring System...")
     print("📡 API will be available at: http://localhost:5000")

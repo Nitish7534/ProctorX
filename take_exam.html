@@ -311,6 +311,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Fullscreen Warning -->
     <div id="fullscreenWarning" class="fullscreen-warning">
@@ -408,13 +409,35 @@
                 <div class="proctoring-panel">
                     <h3><i class="fas fa-shield-alt"></i> Proctoring Active</h3>
                     
-                    <div class="webcam-feed" id="webcamFeed">
-                        <div style="text-align: center;">
-                            <i class="fas fa-camera" style="font-size: 48px; margin-bottom: 10px;"></i>
-                            <p>Webcam Feed</p>
-                            <p style="font-size: 12px;">Live monitoring active</p>
-                        </div>
-                    </div>
+                 <div
+    class="webcam-feed"
+    id="webcamFeed"
+    style="position: relative;">
+
+    <div
+        id="faceStatus"
+        style="
+            position:absolute;
+            top:10px;
+            left:10px;
+            background:#4CAF50;
+            color:white;
+            padding:5px 10px;
+            border-radius:5px;
+            z-index:1000;
+            font-size:12px;">
+        Face Detected
+    </div>
+
+    <video
+        id="webcamVideo"
+        autoplay
+        playsinline
+        muted
+        style="width:100%; height:100%; object-fit:cover;">
+    </video>
+
+</div>
                     
                     <div class="proctoring-status">
                         <div class="status-item">
@@ -503,10 +526,126 @@
         let violationCount = 0;
         let photosCaptured = 0;
         let captureInterval = null;
+        let faceDetection = null;
+        let noFaceCount = 0;
+        let multipleFaceCount = 0;
         
         // Browser lockdown variables
         let fullscreenLeftTime = 5;
         let fullscreenWarningActive = false;
+
+        async function startFaceDetection() {
+
+    const video =
+        document.getElementById(
+            'webcamVideo'
+        );
+
+    const detector =
+        new FaceDetection({
+
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
+            }
+
+        });
+
+    detector.setOptions({
+
+        model: 'short',
+        minDetectionConfidence: 0.5
+
+    });
+
+    detector.onResults((results) => {
+
+        const faces =
+            results.detections
+            ? results.detections.length
+            : 0;
+
+        const status =
+            document.getElementById(
+                'faceStatus'
+            );
+
+        if (faces === 0) {
+
+            status.textContent =
+                'No Face';
+
+            status.style.background =
+                '#f44336';
+
+            noFaceCount++;
+
+            if (noFaceCount >= 5) {
+
+                recordViolation(
+                    'No Face Detected'
+                );
+
+                noFaceCount = 0;
+            }
+
+        }
+
+        else if (faces > 1) {
+
+            status.textContent =
+                'Multiple Faces';
+
+            status.style.background =
+                '#ff9800';
+
+            multipleFaceCount++;
+
+            if (
+                multipleFaceCount >= 3
+            ) {
+
+                recordViolation(
+                    'Multiple Faces Detected'
+                );
+
+                multipleFaceCount = 0;
+            }
+
+        }
+
+        else {
+
+            status.textContent =
+                'Face Detected';
+
+            status.style.background =
+                '#4CAF50';
+
+            noFaceCount = 0;
+            multipleFaceCount = 0;
+
+        }
+
+    });
+
+    const camera =
+        new Camera(video, {
+
+            onFrame: async () => {
+
+                await detector.send({
+                    image: video
+                });
+
+            },
+
+            width: 640,
+            height: 480
+
+        });
+
+    camera.start();
+}
         
         async function loadExam() {
             try {
@@ -548,14 +687,24 @@
                 updateNavigation();
                 updateCounts();
                 
-                // Start proctoring
                 startProctoring();
-                
-                // Prevent right-click, copy-paste, etc.
-                enableBrowserLockdown();
-                
-                // Request fullscreen
-                requestFullscreen();
+
+const webcamStarted = await startWebcam('webcamVideo');
+if (webcamStarted) {
+
+    startFaceDetection();
+
+}
+if (webcamStarted) {
+    document.getElementById('webcamStatus').textContent = 'Active';
+    document.getElementById('webcamStatus').style.color = '#4CAF50';
+} else {
+    document.getElementById('webcamStatus').textContent = 'Camera Failed';
+    document.getElementById('webcamStatus').style.color = '#f44336';
+}
+
+enableBrowserLockdown();
+requestFullscreen();
                 
             } catch (error) {
                 document.getElementById('questionsContainer').innerHTML = `
@@ -832,13 +981,13 @@
         
         function startProctoring() {
             // Start photo capture every 5 seconds
-            captureInterval = setInterval(capturePhoto, 5000);
+            captureInterval = setInterval(captureExamPhoto, 5000);
             
             // Start violation detection
             startViolationDetection();
         }
         
-        function capturePhoto() {
+        function captureExamPhoto() {
             photosCaptured++;
             document.getElementById('photosCount').textContent = photosCaptured;
             
@@ -895,6 +1044,23 @@
                     showFullscreenWarning();
                 }
             });
+
+
+            //developer tools detection
+          setInterval(() => {
+
+    const threshold = 160;
+
+    if (
+        window.outerWidth - window.innerWidth > threshold ||
+        window.outerHeight - window.innerHeight > threshold
+    ) {
+
+        recordViolation('Developer Tools Opened');
+
+    }
+
+}, 3000);
         }
         
         function recordViolation(message) {
@@ -965,18 +1131,51 @@
                 });
             }
         }
+
+
         
         function enableBrowserLockdown() {
             // Disable keyboard shortcuts
             document.addEventListener('keydown', (e) => {
                 // Disable F5, Ctrl+R, Ctrl+Shift+R, F11, etc.
-                if (e.key === 'F5' || 
-                    (e.ctrlKey && e.key === 'r') || 
-                    (e.ctrlKey && e.shiftKey && e.key === 'R') ||
-                    e.key === 'F11') {
-                    e.preventDefault();
-                    recordViolation('Refresh/function key pressed');
-                }
+               if (e.key === 'F12') {
+    e.preventDefault();
+    recordViolation(
+        'F12 Pressed'
+    );
+}
+
+if (
+    e.ctrlKey &&
+    e.shiftKey &&
+    e.key === 'I'
+) {
+    e.preventDefault();
+    recordViolation(
+        'Inspect Element Attempt'
+    );
+}
+
+if (
+    e.ctrlKey &&
+    e.shiftKey &&
+    e.key === 'J'
+) {
+    e.preventDefault();
+    recordViolation(
+        'Console Open Attempt'
+    );
+}
+
+if (
+    e.ctrlKey &&
+    e.key === 'u'
+) {
+    e.preventDefault();
+    recordViolation(
+        'View Source Attempt'
+    );
+}
                 
                 // Disable print screen
                 if (e.key === 'PrintScreen') {
@@ -1022,6 +1221,7 @@
         async function finalSubmit() {
             clearInterval(timer);
             clearInterval(captureInterval);
+            stopWebcam();
             
             // Calculate score
             let score = 0;
@@ -1103,5 +1303,8 @@
             }
         };
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
