@@ -529,7 +529,9 @@
         let faceDetection = null;
         let noFaceCount = 0;
         let multipleFaceCount = 0;
-        
+        let noFaceLogged = false;
+        let multipleFacesLogged = false;
+        let devToolsLogged = false;
         // Browser lockdown variables
         let fullscreenLeftTime = 5;
         let fullscreenWarningActive = false;
@@ -571,60 +573,58 @@
 
         if (faces === 0) {
 
-            status.textContent =
-                'No Face';
+    status.textContent = 'No Face';
+    status.style.background = '#f44336';
 
-            status.style.background =
-                '#f44336';
+    noFaceCount++;
 
-            noFaceCount++;
+    if (
+        noFaceCount >= 60 &&
+        !noFaceLogged
+    ) {
 
-            if (noFaceCount >= 5) {
+        recordViolation(
+            'No Face Detected'
+        );
 
-                recordViolation(
-                    'No Face Detected'
-                );
+        noFaceLogged = true;
+    }
 
-                noFaceCount = 0;
-            }
+}
 
-        }
+      else if (faces > 1) {
 
-        else if (faces > 1) {
+    status.textContent = 'Multiple Faces';
+    status.style.background = '#ff9800';
 
-            status.textContent =
-                'Multiple Faces';
+    multipleFaceCount++;
 
-            status.style.background =
-                '#ff9800';
+    if (
+        multipleFaceCount >= 30 &&
+        !multipleFacesLogged
+    ) {
 
-            multipleFaceCount++;
+        recordViolation(
+            'Multiple Faces Detected'
+        );
 
-            if (
-                multipleFaceCount >= 3
-            ) {
+        multipleFacesLogged = true;
+    }
 
-                recordViolation(
-                    'Multiple Faces Detected'
-                );
+}
 
-                multipleFaceCount = 0;
-            }
+      else {
 
-        }
+    status.textContent = 'Face Detected';
+    status.style.background = '#4CAF50';
 
-        else {
+    noFaceCount = 0;
+    multipleFaceCount = 0;
 
-            status.textContent =
-                'Face Detected';
+    noFaceLogged = false;
+    multipleFacesLogged = false;
 
-            status.style.background =
-                '#4CAF50';
-
-            noFaceCount = 0;
-            multipleFaceCount = 0;
-
-        }
+}
 
     });
 
@@ -988,25 +988,40 @@ requestFullscreen();
         }
         
         function captureExamPhoto() {
-            photosCaptured++;
-            document.getElementById('photosCount').textContent = photosCaptured;
-            
-            // In real implementation, capture webcam photo and send to server
-            // For demo, just increment counter
-            
-            // Show capture indicator
-            const feed = document.getElementById('webcamFeed');
-            const indicator = document.createElement('div');
-            indicator.className = 'photo-capture';
-            indicator.textContent = `Photo ${photosCaptured}`;
-            feed.appendChild(indicator);
-            
-            setTimeout(() => {
-                if (indicator.parentElement) {
-                    indicator.remove();
-                }
-            }, 1000);
-        }
+
+    const video =
+        document.getElementById('webcamVideo');
+
+    const canvas =
+        document.createElement('canvas');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+
+    ctx.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    const imageData =
+        canvas.toDataURL('image/jpeg');
+
+    photosCaptured++;
+
+    document.getElementById(
+        'photosCount'
+    ).textContent = photosCaptured;
+
+    console.log(
+        'Captured image',
+        imageData.substring(0,50)
+    );
+}
         
         function startViolationDetection() {
             // Detect tab switching
@@ -1051,13 +1066,25 @@ requestFullscreen();
 
     const threshold = 160;
 
-    if (
+    const devToolsOpen =
         window.outerWidth - window.innerWidth > threshold ||
-        window.outerHeight - window.innerHeight > threshold
+        window.outerHeight - window.innerHeight > threshold;
+
+    if (
+        devToolsOpen &&
+        !devToolsLogged
     ) {
 
-        recordViolation('Developer Tools Opened');
+        recordViolation(
+            'Developer Tools Opened'
+        );
 
+        devToolsLogged = true;
+    }
+
+    if (!devToolsOpen) {
+
+        devToolsLogged = false;
     }
 
 }, 3000);
