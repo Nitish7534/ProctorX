@@ -686,64 +686,123 @@
             document.getElementById('instructionsModal').style.display = 'flex';
         }
         
-        async function startExam() {
-            if (!selectedExamId) return;
-            
-            // First, verify student's face
-            try {
-                const faceVerified = await verifyFace();
-                
-                if (!faceVerified) {
-                    alert('Face verification failed. Please try again or contact administrator.');
-                    return;
-                }
-                
-                // Start the exam
-                window.location.href = `take_exam.html?exam_id=${selectedExamId}`;
-                
-            } catch (error) {
-                alert(`Error: ${error.message}. Please ensure webcam is connected.`);
-            }
+       async function startExam() {
+
+    console.log("Start Exam Clicked");
+
+    if (!selectedExamId) {
+        console.log("No Exam Selected");
+        return;
+    }
+
+    try {
+
+        const faceVerified = await verifyFace();
+
+        console.log(
+            "Face Verified:",
+            faceVerified
+        );
+
+        if (!faceVerified) {
+
+            alert(
+                "Face verification failed"
+            );
+
+            return;
         }
+
+        console.log(
+            "Redirecting..."
+        );
+
+        window.location.href =
+            `take_exam.html?exam_id=${selectedExamId}`;
+
+    }
+    catch(error) {
+
+        console.error(error);
+
+        alert(error.message);
+    }
+}
         
         async function verifyFace() {
-            // For demo, we'll use a simple verification
-            // In real implementation, use face-api.js or similar
-            
-            return new Promise((resolve) => {
-                // Show face verification modal
-                const modalHTML = `
-                    <div class="modal" style="display: flex;">
-                        <div class="modal-content">
-                            <h2><i class="fas fa-camera"></i> Face Verification</h2>
-                            <p>Please look at the camera for face verification.</p>
-                            <div style="text-align: center; margin: 20px 0;">
-                                <video id="verificationVideo" width="320" height="240" autoplay style="border-radius: 10px; border: 3px solid #4CAF50;"></video>
-                            </div>
-                            <div style="text-align: center;">
-                                <button onclick="capturePhotoForVerification()" class="btn" style="background: #4CAF50;">
-                                    <i class="fas fa-camera"></i> Capture & Verify
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                // Create modal
-                const modalDiv = document.createElement('div');
-                modalDiv.innerHTML = modalHTML;
-                document.body.appendChild(modalDiv);
-                
-                // Start webcam
-                startVerificationWebcam();
-                
-                // For demo, auto-verify after 2 seconds
-                setTimeout(() => {
-                    document.body.removeChild(modalDiv);
-                    resolve(true);
-                }, 2000);
-            });
-        }
+
+    const stream =
+        await navigator
+        .mediaDevices
+        .getUserMedia({
+            video:true
+        });
+
+    const video =
+        document.createElement(
+            'video'
+        );
+
+    video.srcObject = stream;
+
+    await video.play();
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const canvas =
+        document.createElement(
+            'canvas'
+        );
+
+    canvas.width = 320;
+    canvas.height = 240;
+
+    const ctx =
+        canvas.getContext(
+            '2d'
+        );
+
+    ctx.drawImage(
+        video,
+        0,
+        0,
+        320,
+        240
+    );
+
+    const image =
+        canvas.toDataURL(
+            'image/jpeg'
+        );
+
+    stream
+    .getTracks()
+    .forEach(
+        track =>
+        track.stop()
+    );
+
+    const response =
+        await fetch(
+            'http://localhost:5000/api/verify-face',
+            {
+                method:'POST',
+                headers:{
+                    'Content-Type':
+                    'application/json'
+                },
+                body:JSON.stringify({
+                    student_id:
+                        student.id,
+                    image:image
+                })
+            }
+        );
+
+    const result =
+        await response.json();
+
+    return result.verified;
+}
         
         function startVerificationWebcam() {
             // Webcam code would go here

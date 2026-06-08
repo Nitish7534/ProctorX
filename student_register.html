@@ -31,8 +31,39 @@
                     <label for="confirmPassword">Confirm Password:</label>
                     <input type="password" id="confirmPassword" placeholder="Re-enter password" required>
                 </div>
-                
+                <div class="form-group">
+    <label>Face Registration:</label>
+
+    <video id="video"
+           width="320"
+           height="240"
+           autoplay
+           style="border:2px solid #ccc;">
+    </video>
+
+    <br><br>
+
+    <button
+        type="button"
+        onclick="captureFace()">
+
+        Capture Face
+
+    </button>
+
+    <canvas
+        id="canvas"
+        width="320"
+        height="240"
+        style="display:none;">
+    </canvas>
+
+    <input
+        type="hidden"
+        id="profilePhoto">
+</div>
                 <button type="submit" class="btn register-btn">Register</button>
+               
             </form>
             
             <div class="links">
@@ -45,6 +76,55 @@
     </div>
 
     <script>
+        navigator.mediaDevices
+.getUserMedia({
+    video:true
+})
+.then(stream => {
+
+    document
+    .getElementById('video')
+    .srcObject = stream;
+
+});
+
+function captureFace() {
+
+    const video =
+        document.getElementById(
+            'video'
+        );
+
+    const canvas =
+        document.getElementById(
+            'canvas'
+        );
+
+    const ctx =
+        canvas.getContext('2d');
+
+    ctx.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    const image =
+        canvas.toDataURL(
+            'image/jpeg'
+        );
+
+    document
+    .getElementById(
+        'profilePhoto'
+    ).value = image;
+
+    alert(
+        "Face Captured Successfully"
+    );
+}
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -73,12 +153,16 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        name: name,
-                        email: email,
-                        password: password,
-                        role: 'student'
-                    })
+                   body: JSON.stringify({
+    name: name,
+    email: email,
+    password: password,
+    role: 'student',
+    profile_photo:
+        document.getElementById(
+            'profilePhoto'
+        ).value
+})
                 });
                 
                 const data = await response.json();

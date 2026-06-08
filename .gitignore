@@ -1,2 +1,6 @@
-venv/
-/.vscode
+.venv311/
+.vscode/
+__pycache__/
+backend/__pycache__/
+backend/face_auth.pyc
+backend/face_auth.pyo

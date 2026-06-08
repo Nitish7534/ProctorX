@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 from flask import Flask, request, jsonify, session
 from datetime import timedelta
+from face_auth import verify_face
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -1992,6 +1993,66 @@ def get_all_violations():
 @app.route('/hello')
 def hello():
     return "HELLO PROCTORX"
+
+
+@app.route(
+    '/api/verify-face',
+    methods=['POST']
+)
+def verify_student_face():
+
+    try:
+
+        data = request.json
+
+        student_id = data['student_id']
+        live_image = data['image']
+
+        conn = get_db_connection()
+        cursor = conn.cursor(
+            dictionary=True
+        )
+
+        cursor.execute("""
+            SELECT profile_photo
+            FROM users
+            WHERE id=%s
+        """, (student_id,))
+
+        student = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if not student:
+            return jsonify({
+                "verified": False
+            })
+
+        verified = verify_face(
+            student['profile_photo'],
+            live_image
+        )
+
+        print("================================")
+        print("Student ID:", student_id)
+        print("Verification Result:", verified)
+        print("================================")
+
+        return jsonify({
+            "verified": verified
+        })
+
+    except Exception as e:
+
+        print(
+            "FACE VERIFY ERROR:",
+            str(e)
+        )
+
+        return jsonify({
+            "verified": False
+        })
 
 if __name__ == '__main__':
     print("🚀 Starting Exam Proctoring System...")
